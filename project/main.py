@@ -29,7 +29,14 @@ c.execute('''CREATE TABLE IF NOT EXISTS schedule
 c.execute('''CREATE TABLE IF NOT EXISTS homework
              (id INTEGER PRIMARY KEY, subject TEXT, 
              task TEXT, day TEXT, group_id TEXT)''')
+day_for_create = ['Какое расписание в Понедельник?',
+                  'Какое расписание во Втроник?', 'Какое расписание в Среду?',
+                  'Какое расписание в Четверг?', 'Какое расписание в Пятницу?',
+                  'Какое расписание в Субботу?']
+day_for_question = ['Понедельник', 'Вторник', 'Среду', 'Четверг', 'Пятницу',
+                    'Субботу']
 day = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']
+
 short_day = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб']
 
 
@@ -42,7 +49,8 @@ async def start(update, context):
         "/get_schedule - получить расписание на сегодня\n"
         "/add_task - добавить домашнее задание\n"
         "/get_task - получить домашнее задание\n"
-        "/leave_schedule - покинуть данное расписание",
+        "/leave_schedule - покинуть данное расписание\n"
+        "/about - информация о боте",
         reply_markup=ReplyKeyboardRemove())
 
 
@@ -88,9 +96,9 @@ async def create_schedule(update, context):
     """Обработка ответа о чередовании расписания"""
     locality = update.message.text
     if locality == 'Чередующееся':
-        context.user_data['day'] = day + day
+        context.user_data['day'] = day_for_create + day_for_create
     elif 'Не чередующееся':
-        context.user_data['day'] = day
+        context.user_data['day'] = day_for_create
     await update.message.reply_text(
         "Какое расписание в Понедельник? Напиши предметы через запятую "
         "(регистр не важен)",
@@ -131,7 +139,7 @@ async def adding_subjects(update, context):
     else:
         context.user_data['day'] = context.user_data['day'][1:]
         await update.message.reply_text(
-            f"Какие предметы в {context.user_data['day'][0]}? "
+            f"{context.user_data['day'][0]} "
             f"Напиши предметы через запятую "
             f"(регистр не важен)")
         return 3
@@ -179,7 +187,7 @@ async def leave_the_schedule(update, context):
             f"Вы успешно удалены из расписания {key[0][0]}")
     else:
         await update.message.reply_text(
-            f"Вы не добавлены ни в одно расписание. Введите /start чтобы "
+            f"Вы не добавлены ни в одно расписание. Введите /schedule чтобы "
             f"создать расписание либо присоединиться к существующему")
 
 
@@ -196,12 +204,12 @@ async def get_schedule(update, context):
         schedule = c.execute(f'SELECT schedules '
                              f'FROM schedule '
                              f'WHERE group_id="{group_id}"').fetchone()[0]
-        await update.message.reply_text(f'Расписание на {day[id_day_week]}\n' +
-                                        '\n'.join(eval(schedule.lower())[
-                                                      id_day_week]))
+        await update.message.reply_text(
+            f'Расписание на {day_for_question[id_day_week]}\n' +
+            '\n'.join(eval(schedule.lower())[id_day_week]))
     else:
         await update.message.reply_text(
-            f"Вы не добавлены ни в одно расписание. Введите /start чтобы "
+            f"Вы не добавлены ни в одно расписание. Введите /schedule чтобы "
             f"создать расписание либо присоединиться к существующему")
 
 
@@ -235,7 +243,7 @@ async def add_task(update, context):
         return 1
     else:
         await update.message.reply_text(
-            f"Вы не добавлены ни в одно расписание. Введите /start чтобы "
+            f"Вы не добавлены ни в одно расписание. Введите /schedule чтобы "
             f"создать расписание либо присоединиться к существующему")
         return ConversationHandler.END
 
@@ -308,7 +316,7 @@ async def adding_date(update, context):
     if 'сл' in mess_of_date:
         today = datetime.date.today()
         ind_day_week = int(datetime.datetime.today().strftime('%w'))
-        ind = short_day.index(mess_of_date.split()[1]) + 1
+        ind = short_day.index(mess_of_date.lower().split()[1]) + 1
 
         cur_date = today + datetime.timedelta(
             days=7 - ind_day_week + ind)
@@ -316,7 +324,7 @@ async def adding_date(update, context):
     if mess_of_date in short_day:
         today = datetime.date.today()
         ind_day_week = int(datetime.datetime.today().strftime('%w'))
-        ind = short_day.index(mess_of_date.split()[1]) + 1
+        ind = short_day.index(mess_of_date.lower()) + 1
         if ind > ind_day_week:
             cur_date = today + datetime.timedelta(
                 days=ind_day_week + ind)
@@ -405,7 +413,7 @@ async def get_task(update, context):
         return 1
     else:
         await update.message.reply_text(
-            f"Вы не добавлены ни в одно расписание. Введите /start чтобы "
+            f"Вы не добавлены ни в одно расписание. Введите /schedule чтобы "
             f"создать расписание либо присоединиться к существующему")
         return ConversationHandler.END
 
@@ -432,14 +440,15 @@ async def subject_or_day_week(update, context):
                 lessons_markup.append(lessons[i * len_list:])
             else:
                 lessons_markup.append(lessons[i * len_list:(i + 1) * len_list])
-        markup = ReplyKeyboardMarkup(lessons_markup, one_time_keyboard=True)
+        markup = ReplyKeyboardMarkup(lessons_markup, one_time_keyboard=False)
         await update.message.reply_text(
             "По какому предмету?",
             reply_markup=markup)
         return 2
     elif message == 'День недели':
-        reply_keyboard = [short_day]
-        markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+        reply_keyboard = [short_day, ['Сл пн', 'Сл вт', 'Сл ср', 'Сл чт',
+                                      'Сл пт', 'Сл сб']]
+        markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
         await update.message.reply_text(
             f"На какой день недели?",
             reply_markup=markup)
@@ -515,13 +524,13 @@ async def getting_task_subject(update, context):
 
 async def getting_task_day_week(update, context):
     """Отправка заданий на день недели"""
-    mess_of_date = update.message.text.lower()
+    mess_of_date = update.message.text
 
     user_id = str(update.message.from_user.id)
     group_id = c.execute(f'SELECT group_id '
                          f'FROM users '
                          f'WHERE user_id="{user_id}"').fetchone()[0]
-    if mess_of_date in short_day:
+    if mess_of_date.lower() in short_day:
         ind = short_day.index(mess_of_date) + 1
         today = datetime.date.today()
         ind_day_week = int(datetime.datetime.today().strftime('%w'))
@@ -529,6 +538,11 @@ async def getting_task_day_week(update, context):
             cur_date = today - datetime.timedelta(days=ind_day_week - ind)
         else:
             cur_date = today + datetime.timedelta(days=ind - ind_day_week)
+    elif mess_of_date in ['Сл пн', 'Сл вт', 'Сл ср', 'Сл чт', 'Сл пт', 'Сл сб']:
+        ind = short_day.index(mess_of_date.split()[1]) + 1
+        today = datetime.date.today()
+        ind_day_week = int(datetime.datetime.today().strftime('%w'))
+        cur_date = today + datetime.timedelta(days=7 - ind_day_week + ind)
     else:
         await update.message.reply_text(
             f"Неправильный формат ввода",
@@ -550,7 +564,8 @@ async def getting_task_day_week(update, context):
 
     if not homework_list and not photo_list:
         await update.message.reply_text(
-            f"На {cur_date} нет домашнего задания.")
+            f"На {cur_date} нет домашнего задания.",
+            reply_markup=ReplyKeyboardRemove())
     else:
         chat_id = update.message.chat_id
         if homework_list:
@@ -576,6 +591,17 @@ async def stop_get_task(update, context):
         f"Видимо узнать домашку не сильно хочется.. Понимаю",
         reply_markup=ReplyKeyboardRemove())
     return ConversationHandler.END
+
+
+async def about(update, context):
+    """Вывод инфорамции о боте"""
+    await update.message.reply_text(
+        f"Создан 22.04.2023\n"
+        f"Автор: Демидович Ольга, ученица Яндекс.Лицея в 2021-2023 гг\n"
+        f"Информация об авторе:\n"
+        f"Учусь в Инженерном лицее в 10 классе\n"
+        f"@Pidruzhka",
+        reply_markup=ReplyKeyboardRemove())
 
 
 def shuffle_schedule():
@@ -658,7 +684,7 @@ def main():
         CommandHandler('leave_schedule', leave_the_schedule))
     application.add_handler(add_task_dialog)
     application.add_handler(get_task_dialog)
-
+    application.add_handler(CommandHandler('about', about))
     application.add_handler(CommandHandler('get_schedule', get_schedule))
     threading.Thread(target=shuffle_schedule, daemon=True).start()
 
