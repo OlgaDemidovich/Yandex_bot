@@ -30,7 +30,7 @@ c.execute('''CREATE TABLE IF NOT EXISTS homework
              (id INTEGER PRIMARY KEY, subject TEXT, 
              task TEXT, day TEXT, group_id TEXT)''')
 day_for_create = ['Какое расписание в Понедельник?',
-                  'Какое расписание во Втроник?', 'Какое расписание в Среду?',
+                  'Какое расписание во Вторник?', 'Какое расписание в Среду?',
                   'Какое расписание в Четверг?', 'Какое расписание в Пятницу?',
                   'Какое расписание в Субботу?']
 day_for_question = ['Понедельник', 'Вторник', 'Среду', 'Четверг', 'Пятницу',
@@ -327,10 +327,10 @@ async def adding_date(update, context):
         ind = short_day.index(mess_of_date.lower()) + 1
         if ind > ind_day_week:
             cur_date = today + datetime.timedelta(
-                days=ind_day_week + ind)
+                days=ind - ind_day_week)
         else:
             cur_date = today - datetime.timedelta(
-                days=ind_day_week - ind)
+                days=ind - ind_day_week)
 
     if mess_of_date.count('.') == 2:
         mess_of_date = mess_of_date.split('.')
